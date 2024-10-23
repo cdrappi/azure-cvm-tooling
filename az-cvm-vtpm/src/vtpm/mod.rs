@@ -92,7 +92,7 @@ pub enum ReportError {
     #[error("tpm error")]
     Tpm(#[from] tss_esapi::Error),
     #[error("Failed to write value to nvindex")]
-    NvWriteFailed,
+    NvWriteFailed(std::io::Error),
 }
 
 /// Get a HCL report from an nvindex
@@ -162,7 +162,7 @@ fn write_nv_index(
     }
     .open(context)?;
 
-    rw.write_all(data).map_err(|_| ReportError::NvWriteFailed)
+    rw.write_all(data).map_err(|e| ReportError::NvWriteFailed(e))
 }
 
 #[derive(Error, Debug)]
