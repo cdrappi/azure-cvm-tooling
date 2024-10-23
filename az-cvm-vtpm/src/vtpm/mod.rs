@@ -118,7 +118,7 @@ pub fn get_report_with_report_data(report_data: &[u8]) -> Result<Vec<u8>, Report
     Ok(report)
 }
 
-fn get_session_context() -> Result<(NvIndexTpmHandle, Context), ReportError> {
+pub fn get_session_context() -> Result<(NvIndexTpmHandle, Context), ReportError> {
     use tss_esapi::handles::NvIndexTpmHandle;
     let nv_index = NvIndexTpmHandle::new(VTPM_HCL_REPORT_NV_INDEX)?;
 
