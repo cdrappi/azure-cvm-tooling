@@ -3,6 +3,7 @@
 
 use core::time::Duration;
 use serde::{Deserialize, Serialize};
+use tss_esapi::abstraction::nv::{NvOpenOptions, NvReaderWriter};
 use std::io::Write;
 use std::thread;
 use thiserror::Error;
@@ -127,6 +128,39 @@ pub fn get_session_context() -> Result<(NvIndexTpmHandle, Context), ReportError>
     let auth_session = AuthSession::Password;
     context.set_sessions((Some(auth_session), None, None));
     Ok((nv_index, context))
+}
+
+pub fn get_rw_debug(
+    context: &mut Context,
+    nv_index: NvIndexTpmHandle,
+    data: &[u8],
+) -> Result<NvOpenOptions, ReportError> {
+    let owner_nv_index_attributes = NvIndexAttributesBuilder::new()
+        .with_owner_write(true)
+        .with_owner_read(true)
+        .with_pp_read(true)
+        .build()?;
+
+    let owner_nv_public = NvPublicBuilder::new()
+        .with_nv_index(nv_index)
+        .with_index_name_algorithm(HashingAlgorithm::Sha256)
+        .with_index_attributes(owner_nv_index_attributes)
+        .with_data_area_size(data.len())
+        .build()?;
+
+    Ok(match nv::list(context)?
+        .iter()
+        .find(|(public, _)| public.nv_index() == nv_index)
+    {
+        Some(_) => nv::NvOpenOptions::ExistingIndex {
+            nv_index_handle: nv_index,
+            auth_handle: NvAuth::Owner,
+        },
+        None => nv::NvOpenOptions::NewIndex {
+            nv_public: owner_nv_public,
+            auth_handle: NvAuth::Owner,
+        },
+    })
 }
 
 fn write_nv_index(
